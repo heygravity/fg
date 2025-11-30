@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wire Connect Task</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <button id="home-btn" class="ui-btn" onclick="triggerHome()">Home</button>
+    <button id="reset-btn" class="ui-btn" onclick="triggerReset()">Reset</button>
+
+    <header>
+        SYSTEM WIRING <br> LEVEL <span id="level-indicator">1</span> | RECORD: <span id="high-score">1</span>
+    </header>
+
+    <div id="game-board">
+        <svg id="wire-canvas"></svg>
+        <div class="column column-left" id="left-col"></div>
+        <div class="column column-right" id="right-col"></div>
+        
+        <div id="overlay">
+            <div class="task-complete-text">TASK COMPLETED</div>
+            <div class="total-tasks">Loading next sequence...</div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; <span id="year"></span> Gravity | Created By Pritish
+    </footer>
+
+    <script src="app.js" defer></script>
+</body>
+</html>

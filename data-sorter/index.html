@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Archival | The Office Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --sidebar-bg: #1e293b; /* Dark Slate */
+            --workspace-bg: #f1f5f9; /* Light Gray */
+            --text-light: #f8fafc;
+            --text-dark: #0f172a;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-green: #10b981;
+            --border-color: #cbd5e1;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* 1. Header (Navbar) */
+        header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1.5rem;
+            z-index: 50;
+        }
+
+        .header-left, .header-right { flex: 1; display: flex; }
+        .header-right { justify-content: flex-end; }
+        
+        .brand { 
+            font-weight: 700; 
+            font-size: 1rem; 
+            color: var(--text-dark); 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;
+        }
+        
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: #eff6ff; }
+
+        /* 2. Main Layout (Grid) */
+        .app-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+        }
+
+        /* 3. Sidebar (Stats) */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: var(--text-light);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem; /* Reduced gap slightly */
+            border-right: 1px solid #334155;
+            overflow-y: auto; /* Scroll if height is too small */
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #334155;
+        }
+        .avatar-circle { width: 32px; height: 32px; background: var(--accent-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+        .user-text { font-size: 0.85rem; font-weight: 500; }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem; font-weight: 600; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; }
+
+        /* Progress Bar */
+        .progress-track { height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-top: 5px; }
+        .progress-fill { height: 100%; background: var(--accent-green); width: 0%; transition: width 0.3s; }
+        
+        /* Integrity Bar */
+        .integrity-fill { height: 100%; background: var(--accent-blue); width: 100%; transition: width 0.3s, background 0.3s; }
+
+        /* Current Rule Display */
+        .rule-display {
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--accent-blue);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .rule-title { color: var(--accent-blue); font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+        .rule-text { font-size: 1.1rem; font-weight: 600; }
+
+        /* Footer - Pushed to bottom via margin-top: auto */
+        .footer-bar {
+            margin-top: auto;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #64748b;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+
+        /* 4. Workspace (Game Area) */
+        .workspace {
+            flex: 1;
+            background: var(--workspace-bg);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Drop Zone (File Stack) */
+        .incoming-zone {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 2px dashed #cbd5e1;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .zone-label {
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #cbd5e1;
+            font-size: 2rem;
+            font-weight: 700;
+            opacity: 0.5;
+            z-index: 0;
+        }
+
+        /* File Card Styling */
+        .file-card {
+            width: 160px;
+            height: 220px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+            cursor: grab;
+            position: absolute; 
+            transition: transform 0.1s;
+            z-index: 10;
+        }
+        
+        .file-card:active { cursor: grabbing; transform: scale(1.05); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+
+        .file-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+        .file-name { font-size: 0.9rem; font-weight: 600; color: var(--text-dark); text-align: center; margin-bottom: 4px; word-break: break-all; }
+        .file-meta { font-size: 0.75rem; color: #64748b; margin-top: auto; background: #f8fafc; padding: 4px 8px; border-radius: 4px; font-weight: 500; }
+
+        /* Folders Grid */
+        .folders-grid {
+            height: 180px;
+            display: grid;
+            gap: 1rem;
+            /* Grid columns set dynamically */
+        }
+
+        .folder {
+            background: white;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .folder.drag-over {
+            border-color: var(--accent-blue);
+            background: #eff6ff;
+            transform: translateY(-5px);
+        }
+
+        .folder-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .folder-name { font-size: 0.9rem; font-weight: 600; color: #475569; }
+
+        /* Toaster */
+        #feedback {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--sidebar-bg);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+        }
+        
+        #feedback.show { transform: translateY(0); opacity: 1; }
+        .toast-success { border-left: 4px solid var(--accent-green); }
+        .toast-error { border-left: 4px solid var(--accent-red); }
+
+        /* Tutorial Modal */
+        #tutorial-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            text-align: center;
+        }
+
+        .modal-icon { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        .modal-title { font-size: 1.5rem; font-weight: 800; color: var(--text-dark); margin-bottom: 1rem; }
+        .modal-text { color: #64748b; line-height: 1.6; margin-bottom: 2rem; font-size: 0.95rem; }
+        
+        .tutorial-steps {
+            text-align: left;
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .step { display: flex; gap: 10px; margin-bottom: 10px; font-size: 0.9rem; align-items: flex-start; }
+        .step-num { background: var(--accent-blue); color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+
+        .modal-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        
+        .checkbox-wrapper input {
+            width: 16px; 
+            height: 16px; 
+            cursor: pointer; 
+            accent-color: var(--accent-blue);
+        }
+
+        .start-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .start-btn:hover { background: #2563eb; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .app-container { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; flex-direction: row; padding: 10px; gap: 10px; align-items: center; overflow: visible; }
+            .stat-card { padding: 5px 10px; flex: 1; }
+            .stat-label { display: none; }
+            .stat-value { font-size: 1rem; }
+            .rule-display { margin: 0; padding: 5px; flex: 1; }
+            .rule-title { display: none; }
+            .rule-text { font-size: 0.8rem; }
+            .user-info, .footer-bar { display: none; }
+            .game-wrapper { margin-top: 0; }
+            header { padding: 0 10px; }
+            .file-card { width: 120px; height: 160px; }
+            .folder-icon { font-size: 1.5rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <button class="nav-btn" onclick="goHome()">Home</button>
+        </div>
+        <div class="brand">
+            <span style="color:var(--accent-blue)">DATA</span>ARCHIVAL
+        </div>
+        <div class="header-right">
+            <button class="nav-btn" onclick="showTutorial()">Help</button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+            <div class="user-info">
+                <div class="avatar-circle">EP</div>
+                <div class="user-text" id="emp-id">Employee</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Batch Progress</div>
+                <div class="stat-value"><span id="files-done">0</span> / <span id="files-total">10</span></div>
+                <div class="progress-track"><div class="progress-fill" id="progress-bar"></div></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">System Integrity</div>
+                <div class="stat-value" id="integrity-text">100%</div>
+                <div class="progress-track"><div class="integrity-fill" id="integrity-bar"></div></div>
+            </div>
+
+            <div class="rule-display">
+                <div class="rule-title">ACTIVE SORTING PROTOCOL</div>
+                <div class="rule-text" id="current-rule">WAITING...</div>
+            </div>
+            
+            <div class="footer-bar">
+                © <span id="year"></span> Gravity Systems
+            </div>
+        </aside>
+
+        <!-- RIGHT WORKSPACE -->
+        <main class="workspace">
+            <div class="incoming-zone" id="drop-zone">
+                <div class="zone-label">INCOMING STREAM</div>
+                <!-- File Card spawns here -->
+            </div>
+
+            <div class="folders-grid" id="folders-area">
+                <!-- Folders spawn here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- TUTORIAL MODAL -->
+    <div id="tutorial-modal">
+        <div class="modal-content">
+            <span class="modal-icon">📂</span>
+            <h2 class="modal-title">Archival Protocol Training</h2>
+            <p class="modal-text">
+                Welcome to Data Management. Your task is to organize client files into the correct encrypted folders. Precision is mandatory.
+            </p>
+            
+            <div class="tutorial-steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div><strong>Check the Active Protocol:</strong> Look at the blue box in the sidebar. It will tell you whether to sort by <span style="color:var(--accent-blue)">FILE TYPE</span> or <span style="color:var(--accent-blue)">SECURITY LEVEL</span>.</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div><strong>Analyze the File:</strong> Check the file card in the center for its Extension (e.g., PDF) or Tag (e.g., TOP SECRET).</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div><strong>Drag & Drop:</strong> Move the file to the matching folder below. Incorrect sorting damages system integrity.</div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <label class="checkbox-wrapper">
+                    <input type="checkbox" id="dont-show-again">
+                    <span>Don't show instructions again</span>
+                </label>
+                <button class="start-btn" onclick="startGame()">INITIALIZE SYSTEM</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback">Initializing...</div>
+
+    <script>
+        // --- Game Config ---
+        const RULES = {
+            EXTENSION: 'extension',
+            SECURITY: 'security'
+        };
+
+        const FILE_TYPES = [
+            { ext: 'PDF', icon: '📄', color: '#3b82f6', cat: 'DOCS' },
+            { ext: 'JPG', icon: '🖼️', color: '#8b5cf6', cat: 'MEDIA' },
+            { ext: 'TXT', icon: '📝', color: '#10b981', cat: 'NOTES' },
+            { ext: 'DAT', icon: '🔒', color: '#ef4444', cat: 'SECURE' }
+        ];
+
+        const SECURITY_LEVELS = ['PUBLIC', 'INTERNAL', 'CONFIDENTIAL', 'TOP SECRET'];
+        
+        // --- State ---
+        let level = 1;
+        let filesProcessed = 0;
+        let filesGoal = 10;
+        let integrity = 100;
+        let currentRule = RULES.EXTENSION;
+        let activeFile = null;
+        let activeFolders = [];
+        let isDragging = false;
+        let startX, startY;
+        let feedbackTimeout;
+
+        // --- Init ---
+        function init() {
+            document.getElementById('year').textContent = new Date().getFullYear();
+            
+            // Identity Logic: Fetch or Generate
+            const storageKey = 'gravity_employee_id';
+            let identity = localStorage.getItem(storageKey);
+            
+            if (!identity) {
+                // Generate new ID if missing (e.g. direct access)
+                const randomId = Math.floor(Math.random() * 9000) + 1000;
+                identity = `Employee #${randomId}`;
+                localStorage.setItem(storageKey, identity);
+            }
+            
+            document.getElementById('emp-id').textContent = identity;
+            
+            // Check Tutorial Preference
+            if (localStorage.getItem('gravity_files_tutorial_seen') === 'true') {
+                document.getElementById('tutorial-modal').style.display = 'none';
+                startLevel();
+            } else {
+                // Modal is visible by CSS default
+            }
+        }
+
+        function showTutorial() {
+            document.getElementById('tutorial-modal').style.display = 'flex';
+        }
+
+        function startGame() {
+            // Save Preference
+            const checkbox = document.getElementById('dont-show-again');
+            if (checkbox && checkbox.checked) {
+                localStorage.setItem('gravity_files_tutorial_seen', 'true');
+            }
+
+            document.getElementById('tutorial-modal').style.display = 'none';
+            // Only start level if not already running (to avoid duplicate items if clicked Help -> Start)
+            if (!activeFile) {
+                startLevel();
+            }
+        }
+
+        function startLevel() {
+            filesProcessed = 0;
+            filesGoal = 5 + (level * 2);
+            integrity = 100;
+            
+            // Randomize Rule for levels > 1
+            if (level === 1) currentRule = RULES.EXTENSION;
+            else if (level === 2) currentRule = RULES.SECURITY;
+            else currentRule = Math.random() > 0.5 ? RULES.EXTENSION : RULES.SECURITY;
+
+            updateUI();
+            setupFolders();
+            spawnFile();
+        }
+
+        function setupFolders() {
+            const container = document.getElementById('folders-area');
+            container.innerHTML = '';
+            activeFolders = [];
+
+            let items = [];
+            if (currentRule === RULES.EXTENSION) {
+                items = ['DOCS', 'MEDIA', 'SECURE'];
+                items.forEach(cat => createFolderHTML(container, cat, '📁', cat));
+            } else {
+                items = ['PUBLIC', 'INTERNAL', 'TOP SECRET'];
+                items.forEach(lvl => {
+                    let icon = lvl === 'TOP SECRET' ? '🔴' : (lvl === 'INTERNAL' ? '🟠' : '🟢');
+                    createFolderHTML(container, lvl, icon, lvl);
+                });
+            }
+            
+            container.style.gridTemplateColumns = `repeat(${items.length}, 1fr)`;
+            activeFolders = items;
+        }
+
+        function createFolderHTML(container, id, icon, label) {
+            const div = document.createElement('div');
+            div.className = 'folder';
+            div.dataset.id = id;
+            div.innerHTML = `
+                <div class="folder-icon">${icon}</div>
+                <div class="folder-name">${label}</div>
+            `;
+            container.appendChild(div);
+        }
+
+        function spawnFile() {
+            const zone = document.getElementById('drop-zone');
+            zone.innerHTML = '<div class="zone-label">INCOMING STREAM</div>';
+
+            // Randomize File
+            const type = FILE_TYPES[Math.floor(Math.random() * FILE_TYPES.length)];
+            const secLevel = SECURITY_LEVELS[Math.floor(Math.random() * SECURITY_LEVELS.length)];
+
+            activeFile = {
+                type: type,
+                name: `file_${Math.floor(Math.random()*1000)}.${type.ext.toLowerCase()}`,
+                security: secLevel,
+                element: null
+            };
+
+            // Solvability check
+            if(currentRule === RULES.EXTENSION && !activeFolders.includes(type.cat)) {
+                // Reroll type
+                const validCat = activeFolders[Math.floor(Math.random()*activeFolders.length)];
+                const validTypes = FILE_TYPES.filter(t => t.cat === validCat);
+                activeFile.type = validTypes[0];
+                activeFile.name = `file_${Math.floor(Math.random()*1000)}.${activeFile.type.ext.toLowerCase()}`;
+            }
+            if(currentRule === RULES.SECURITY && !activeFolders.includes(secLevel)) {
+                activeFile.security = activeFolders[Math.floor(Math.random()*activeFolders.length)];
+            }
+
+            // Create Card
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            
+            // Display tag based on rule to help user
+            let metaText = activeFile.type.ext;
+            if (currentRule === RULES.SECURITY) metaText = activeFile.security;
+
+            card.innerHTML = `
+                <div class="file-icon" style="color:${activeFile.type.color}">${activeFile.type.icon}</div>
+                <div class="file-name">${activeFile.name}</div>
+                <div class="file-meta">${metaText}</div>
+            `;
+
+            // Center initial position
+            card.style.top = '50%';
+            card.style.left = '50%';
+            card.style.transform = 'translate(-50%, -50%)';
+
+            // Drag Events
+            card.addEventListener('mousedown', dragStart);
+            card.addEventListener('touchstart', dragStart, {passive: false});
+
+            activeFile.element = card;
+            zone.appendChild(card);
+        }
+
+        // --- Drag Logic ---
+        function dragStart(e) {
+            if(!activeFile) return;
+            isDragging = true;
+            
+            if (e.type === 'touchstart') {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            } else {
+                startX = e.clientX;
+                startY = e.clientY;
+            }
+
+            // Bring to front
+            activeFile.element.style.zIndex = 100;
+            activeFile.element.style.cursor = 'grabbing';
+            
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('touchmove', dragMove, {passive: false});
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            let clientX, clientY;
+            if (e.type === 'touchmove') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            // Calculate movement delta
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            // Apply transform relative to the centered position
+            activeFile.element.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(5deg)`;
+            
+            checkHover(clientX, clientY);
+        }
+
+        function dragEnd(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchend', dragEnd);
+
+            let clientX, clientY;
+            if (e.changedTouches) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const targetId = getTargetFolder(clientX, clientY);
+            
+            if (targetId) {
+                validateSort(targetId);
+            } else {
+                // Snap back
+                activeFile.element.style.transition = 'transform 0.3s ease-out';
+                activeFile.element.style.transform = 'translate(-50%, -50%)';
+                setTimeout(() => {
+                    activeFile.element.style.transition = 'transform 0.1s'; 
+                }, 300);
+            }
+            
+            document.querySelectorAll('.folder').forEach(f => f.classList.remove('drag-over'));
+        }
+
+        function checkHover(x, y) {
+            document.querySelectorAll('.folder').forEach(f => {
+                const rect = f.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    f.classList.add('drag-over');
+                } else {
+                    f.classList.remove('drag-over');
+                }
+            });
+        }
+
+        function getTargetFolder(x, y) {
+            let target = null;
+            document.querySelectorAll('.folder').forEach(f => {
+                const rect = f.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    target = f.dataset.id;
+                }
+            });
+            return target;
+        }
+
+        // --- Logic ---
+        function validateSort(folderId) {
+            let isCorrect = false;
+
+            if (currentRule === RULES.EXTENSION) {
+                if (activeFile.type.cat === folderId) isCorrect = true;
+            } else {
+                if (activeFile.security === folderId) isCorrect = true;
+            }
+
+            if (isCorrect) {
+                activeFile.element.remove();
+                filesProcessed++;
+                showFeedback(true, "FILE ARCHIVED");
+                
+                if (filesProcessed >= filesGoal) {
+                    level++;
+                    setTimeout(() => {
+                        showFeedback(true, "BATCH COMPLETE. UPGRADING...");
+                        startLevel();
+                    }, 1000);
+                } else {
+                    spawnFile();
+                }
+            } else {
+                integrity -= 25;
+                showFeedback(false, "ERROR: INVALID DESTINATION");
+                
+                // Reset card visually
+                activeFile.element.style.transition = 'transform 0.3s ease';
+                activeFile.element.style.transform = 'translate(-50%, -50%)';
+                
+                if (integrity <= 0) {
+                    alert("SYSTEM FAILURE: DATA CORRUPTION CRITICAL");
+                    resetGame();
+                }
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('files-done').textContent = filesProcessed;
+            document.getElementById('files-total').textContent = filesGoal;
+            document.getElementById('progress-bar').style.width = (filesProcessed/filesGoal)*100 + '%';
+            
+            document.getElementById('integrity-text').textContent = integrity + '%';
+            const iBar = document.getElementById('integrity-bar');
+            iBar.style.width = integrity + '%';
+            iBar.style.background = integrity > 50 ? 'var(--accent-blue)' : '#ef4444';
+
+            document.getElementById('current-rule').textContent = currentRule === RULES.EXTENSION ? 'SORT BY TYPE' : 'SORT BY CLEARANCE';
+        }
+
+        function showFeedback(isSuccess, msg) {
+            const fb = document.getElementById('feedback');
+            fb.innerHTML = isSuccess ? '<span>✓</span> ' + msg : '<span>✕</span> ' + msg;
+            fb.className = isSuccess ? 'toast-success show' : 'toast-error show';
+            
+            if (feedbackTimeout) clearTimeout(feedbackTimeout);
+            feedbackTimeout = setTimeout(() => {
+                fb.classList.remove('show');
+            }, 2000);
+        }
+
+        function resetGame() {
+            level = 1;
+            startLevel();
+        }
+
+        function goHome() {
+            window.location.href = '/index.html';
+        }
+
+        init();
+
+    </script>
+</body>
+</html>

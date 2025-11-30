@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tactical Assessment | The Office Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Load Chess.js for logic -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <style>
+        /* Global Box Sizing Fix */
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-blue: #2563eb;
+            
+            /* New Blue Theme */
+            --board-light: #f1f5f9;
+            --board-dark: #4b7399; /* Classic Blue Chess Board Color */
+            
+            --highlight: rgba(255, 255, 0, 0.5);
+            --selected: rgba(20, 85, 30, 0.5);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Header Layout: Fixed at top */
+        header {
+            width: 100%;
+            background: transparent; 
+            /* Optional: Add backdrop blur for readability if content scrolls behind */
+            backdrop-filter: blur(2px); 
+            border-bottom: none;
+            padding: 1.5rem 2rem; 
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            box-shadow: none;
+            position: fixed; 
+            top: 0;
+            left: 0;
+            z-index: 50;
+        }
+
+        .header-left { justify-self: start; }
+        .header-center { display: flex; flex-direction: column; align-items: center; }
+        .header-right { justify-self: end; }
+
+        .brand { 
+            font-weight: 800; 
+            font-size: 1.1rem; 
+            letter-spacing: -0.025em;
+            color: var(--text-primary);
+            text-align: center;
+        }
+        
+        .employee-badge { 
+            font-size: 0.75rem; 
+            color: var(--text-secondary); 
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Minimal Buttons */
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.5); /* Slight white bg for contrast */
+            border: 1px solid #cbd5e1;
+            padding: 8px 16px; 
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,1);
+            color: var(--text-primary);
+            border-color: #94a3b8;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Game Area */
+        .game-container {
+            flex: 1; 
+            /* Add top margin to compensate for fixed header so content isn't hidden */
+            margin-top: 100px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            padding: 0 1rem;
+        }
+
+        .level-card {
+            background: white;
+            padding: 0.75rem 2rem;
+            border-radius: 50px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .level-info { font-weight: 700; color: var(--text-primary); }
+        .high-score { font-size: 0.85rem; color: var(--text-secondary); border-left: 1px solid #cbd5e1; padding-left: 1rem; }
+
+        .instruction {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            text-align: center;
+            min-height: 1.5em; 
+        }
+
+        /* Chess Board */
+        #board {
+            width: 400px;
+            height: 400px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border-radius: 8px; 
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            user-select: none;
+            position: relative;
+            background: white;
+        }
+
+        /* Squares */
+        .square {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .light { background-color: var(--board-light); color: black; }
+        .dark { background-color: var(--board-dark); color: black; }
+
+        /* Interaction States */
+        .selected { background-color: var(--highlight) !important; }
+        .last-move { background-color: rgba(255, 255, 0, 0.2) !important; }
+        
+        /* Pieces */
+        .piece {
+            z-index: 2;
+            pointer-events: none; /* Let clicks pass to square */
+            font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
+            line-height: 1;
+        }
+        
+        /* High contrast pieces */
+        .piece.white { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+        .piece.black { color: #1a1a1a; text-shadow: 0 0 1px rgba(255,255,255,0.5); }
+
+        .square:hover { filter: brightness(0.95); }
+
+        /* Feedback Toaster */
+        #feedback {
+            position: fixed;
+            top: 100px; /* Adjusted based on new header spacing */
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: left;
+            min-width: 220px;
+            z-index: 100;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transform: translateX(20px);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #feedback.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .success { 
+            background: #ffffff; 
+            color: #166534; 
+            border-left: 4px solid #166534;
+        }
+        
+        .error { 
+            background: #ffffff; 
+            color: #991b1b; 
+            border-left: 4px solid #991b1b;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            width: 100%;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 500px) {
+            #board { width: 340px; height: 340px; }
+            .square { font-size: 2.1rem; }
+            .header-center { display: none; } /* Hide title on very small screens to save space */
+            #feedback { 
+                top: auto; 
+                bottom: 20px; 
+                right: 20px; 
+                left: 20px; 
+                text-align: center;
+                justify-content: center;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <button class="nav-btn" onclick="goHome()">
+                Home
+            </button>
+        </div>
+        <div class="header-center">
+            <div class="brand">TACTICAL ASSESSMENT</div>
+            <div class="employee-badge" id="emp-id">Authenticating...</div>
+        </div>
+        <div class="header-right">
+            <button class="nav-btn" onclick="resetPuzzle()">
+                Reset
+            </button>
+        </div>
+    </header>
+
+    <div class="game-container">
+        <div class="level-card">
+            <div class="level-info">Level <span id="level-display">1</span></div>
+            <div class="high-score">Record: <span id="hs-display">0</span></div>
+        </div>
+
+        <p class="instruction" id="instruction-text">Loading Scenario...</p>
+
+        <div id="board">
+            <!-- Squares generated by JS -->
+        </div>
+    </div>
+
+    <!-- Toaster Notification -->
+    <div id="feedback"></div>
+
+    <footer>
+        &copy; <span id="year"></span> Gravity | Created By Pritish & GenAI
+    </footer>
+
+    <script>
+        // --- Game Logic & State ---
+        let game = new Chess();
+        let boardEl = document.getElementById('board');
+        let selectedSquare = null;
+        let currentLevel = 0;
+        let isPuzzleActive = true;
+        let highScore = 0;
+        let feedbackTimeout;
+        let puzzleSequence = []; // To store the shuffled order
+
+        // --- Puzzles Database ---
+        const allPuzzles = [
+            {
+                fen: "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2",
+                target: "d8h4",
+                title: "Identify the structural weakness (Black to Move)",
+                color: 'b'
+            },
+            {
+                fen: "3r2k1/p4ppp/1p6/8/8/6P1/P4P1P/3R2K1 w - - 0 1",
+                target: "d1d8",
+                title: "Capitalize on undefended back rank (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4",
+                target: "h5f7",
+                title: "Execute the Scholar's Mate pattern (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "6k1/1Q3ppp/p7/8/8/8/5PPP/4R1K1 w - - 0 1",
+                target: "b7c8",
+                title: "Execute checkmate sequence (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "r1b3kr/ppp1Bp1p/2nq4/3p2NQ/8/8/P4PPP/R3R1K1 w - - 0 1",
+                target: "h5f7",
+                title: "Attack the weak point (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "r1b2r1k/pp1p1pp1/1b1p2B1/n1q5/8/3Q4/P4PPP/R1B1R1K1 w - - 0 1",
+                target: "d3h3",
+                title: "Force the King into the corner (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "r1bqkbnr/1ppp1ppp/p1n5/4p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 1",
+                target: "f3f7",
+                title: "Punish the early opening mistake (White to Move)",
+                color: 'w'
+            },
+            {
+                fen: "6k1/5ppp/8/8/8/8/4Q3/4K3 w - - 0 1",
+                target: "e2e8",
+                title: "Simple back rank mate (White to Move)",
+                color: 'w'
+            },
+             {
+                fen: "8/8/8/8/8/1k6/1p6/rK6 w - - 0 1",
+                target: "b1a1",
+                title: "Stalemate trap avoidance - Capture! (White to Move)", 
+                // Wait, white captures on a1? No, black moves.
+                // Let's replace with a real one.
+                fen: "8/8/8/8/8/6K1/6R1/6k1 w - - 0 1",
+                target: "g2a2", // Discovered check? No.
+                // Let's do:
+                fen: "k7/P7/1K6/8/8/8/8/8 w - - 0 1", // Stalemate if b6c6?
+                // Let's do Anastasia's Mate pattern
+                fen: "5r1k/1b2Npp1/8/2R5/8/8/5PPP/6K1 w - - 0 1",
+                target: "c5h5",
+                title: "Deliver Checkmate (White to Move)",
+                color: 'w'
+            }
+        ];
+
+        // --- Board Rendering ---
+        const PIECE_UNICODE = {
+            'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+            'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+        };
+
+        function init() {
+            // Footer Year
+            document.getElementById('year').textContent = new Date().getFullYear();
+
+            // Load Identity
+            const empId = localStorage.getItem('gravity_employee_id') || 'Visitor';
+            document.getElementById('emp-id').textContent = empId;
+            
+            // Load High Score
+            const storedHS = localStorage.getItem('gravity_tactical_highscore');
+            highScore = storedHS ? parseInt(storedHS, 10) : 0;
+            updateHighScoreDisplay();
+
+            // Initial Start
+            shufflePuzzles();
+            loadLevel(0);
+        }
+
+        // Fisher-Yates Shuffle
+        function shufflePuzzles() {
+            puzzleSequence = [...allPuzzles];
+            for (let i = puzzleSequence.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [puzzleSequence[i], puzzleSequence[j]] = [puzzleSequence[j], puzzleSequence[i]];
+            }
+        }
+
+        function updateHighScoreDisplay() {
+            document.getElementById('hs-display').textContent = highScore;
+        }
+
+        function loadLevel(idx) {
+            currentLevel = idx;
+            
+            if (idx >= puzzleSequence.length) {
+                // All puzzles solved!
+                showFeedback(true, "All modules complete. Resetting sequence.");
+                setTimeout(() => {
+                    shufflePuzzles();
+                    loadLevel(0);
+                }, 2000);
+                return;
+            }
+
+            const puzzle = puzzleSequence[currentLevel];
+            game.load(puzzle.fen);
+            isPuzzleActive = true;
+            selectedSquare = null;
+
+            document.getElementById('level-display').textContent = currentLevel + 1;
+            document.getElementById('instruction-text').textContent = puzzle.title;
+            
+            hideFeedback();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardEl.innerHTML = '';
+            const boardData = game.board(); 
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const squareDiv = document.createElement('div');
+                    const isDark = (row + col) % 2 === 1;
+                    const squareId = String.fromCharCode(97 + col) + (8 - row); 
+                    
+                    squareDiv.className = `square ${isDark ? 'dark' : 'light'}`;
+                    squareDiv.onclick = () => onSquareClick(squareId);
+
+                    // Render Piece
+                    const piece = boardData[row][col];
+                    if (piece) {
+                        const pieceSpan = document.createElement('span');
+                        pieceSpan.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                        const charCode = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
+                        pieceSpan.textContent = PIECE_UNICODE[charCode];
+                        squareDiv.appendChild(pieceSpan);
+                    }
+
+                    // Selected State
+                    if (selectedSquare === squareId) {
+                        squareDiv.classList.add('selected');
+                    }
+
+                    boardEl.appendChild(squareDiv);
+                }
+            }
+        }
+
+        function onSquareClick(squareId) {
+            if (!isPuzzleActive) return;
+
+            // Deselect logic
+            if (selectedSquare === squareId) {
+                selectedSquare = null;
+                renderBoard();
+                return;
+            }
+
+            // Attempt Move
+            if (selectedSquare) {
+                const moveAttempt = {
+                    from: selectedSquare,
+                    to: squareId,
+                    promotion: 'q'
+                };
+
+                // Check basic legality
+                const legalMove = game.move(moveAttempt);
+
+                if (legalMove) {
+                    game.undo(); // Undo to check against puzzle target string
+                    
+                    const puzzle = puzzleSequence[currentLevel];
+                    const userMoveStr = selectedSquare + squareId;
+
+                    if (userMoveStr === puzzle.target) {
+                        // Success Logic
+                        game.move(moveAttempt);
+                        renderBoard();
+                        isPuzzleActive = false;
+                        showFeedback(true, "Optimal Strategy Executed.");
+                        
+                        // Update High Score
+                        if (currentLevel + 1 > highScore) {
+                            highScore = currentLevel + 1;
+                            localStorage.setItem('gravity_tactical_highscore', highScore);
+                            updateHighScoreDisplay();
+                        }
+
+                        setTimeout(() => loadLevel(currentLevel + 1), 1000);
+                    } else {
+                        // Wrong move
+                        showFeedback(false, "Suboptimal move. Try again.");
+                        selectedSquare = null;
+                        renderBoard();
+                    }
+                } else {
+                    // Clicked illegal square or piece of own color to switch
+                    const piece = game.get(squareId);
+                    if (piece && piece.color === game.turn()) {
+                        selectedSquare = squareId;
+                        renderBoard();
+                    } else {
+                        selectedSquare = null;
+                        renderBoard();
+                    }
+                }
+            } else {
+                // Select first piece
+                const piece = game.get(squareId);
+                if (piece && piece.color === game.turn()) {
+                    selectedSquare = squareId;
+                    renderBoard();
+                }
+            }
+        }
+
+        function showFeedback(isSuccess, msg) {
+            const fb = document.getElementById('feedback');
+            fb.innerHTML = isSuccess ? '<span>✓</span> ' + msg : '<span>✕</span> ' + msg;
+            
+            // Reset classes to trigger animation if needed or just switch
+            fb.className = ''; 
+            void fb.offsetWidth; // Force reflow
+            fb.className = isSuccess ? 'success show' : 'error show';
+            
+            // Clear previous timeout
+            if (feedbackTimeout) clearTimeout(feedbackTimeout);
+
+            // Auto-hide messages (Both Success and Error)
+            feedbackTimeout = setTimeout(() => {
+                hideFeedback();
+            }, 3000);
+        }
+
+        function hideFeedback() {
+            const fb = document.getElementById('feedback');
+            fb.classList.remove('show');
+        }
+
+        function resetPuzzle() {
+            // Reset to level 1 (index 0) and reshuffle
+            shufflePuzzles();
+            loadLevel(0);
+            showFeedback(true, "Sequence Reset & Randomized.");
+        }
+
+        function goHome() {
+            window.location.href = '/index.html'; 
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>

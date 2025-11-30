@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Portal | The Office Games</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Corporate Palette */
+            --bg-color: #f3f4f6;
+            --header-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --accent-primary: #2563eb; /* Corporate Blue */
+            --accent-hover: #1d4ed8;
+            --card-surface: #ffffff;
+            --border-color: #e5e7eb;
+            --success-green: #10b981;
+            --warning-orange: #f59e0b;
+            --neutral-gray: #9ca3af;
+            --danger-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Navbar */
+        nav {
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .brand-icon {
+            background: var(--accent-primary);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* Profile & Dropdown */
+        .profile-container {
+            position: relative;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+            user-select: none;
+        }
+
+        .user-profile:hover {
+            background-color: #f3f4f6;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background-color: #e0e7ff;
+            color: var(--accent-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .profile-menu {
+            position: absolute;
+            top: 110%;
+            right: 0;
+            width: 220px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: none;
+            flex-direction: column;
+            padding: 6px;
+            z-index: 200;
+        }
+
+        .profile-menu.show {
+            display: flex;
+        }
+
+        .menu-item {
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu-item:hover {
+            background-color: #fef2f2;
+            color: var(--danger-red);
+        }
+
+        .menu-item.danger {
+            color: var(--danger-red);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Grid System */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Card Design - "Productivity Module" Style */
+        .module-card {
+            background: var(--card-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease;
+            position: relative;
+            text-decoration: none; /* remove anchor underline */
+            color: inherit;
+        }
+
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-color: var(--accent-primary);
+        }
+
+        /* Card Header */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background-color: #f9fafb;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-locked {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        /* Content */
+        .module-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+
+        .module-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+            flex-grow: 1;
+        }
+
+        /* Action Button */
+        .action-area {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .priority-level {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+        
+        .priority-high { color: #dc2626; }
+        .priority-med { color: var(--warning-orange); }
+
+        .launch-btn {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .launch-btn::after {
+            content: '→';
+            transition: transform 0.2s;
+        }
+
+        .module-card:hover .launch-btn::after {
+            transform: translateX(4px);
+        }
+
+        /* Disabled State */
+        .module-card.disabled {
+            background-color: #f9fafb;
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+        
+        .module-card.disabled .launch-btn {
+            color: var(--neutral-gray);
+        }
+
+        /* Confirmation Modal */
+        #reset-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            text-align: center;
+        }
+
+        .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+        .modal-desc { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; }
+
+        .modal-actions { display: flex; gap: 12px; justify-content: center; }
+        
+        .btn-cancel {
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .btn-confirm {
+            background: var(--danger-red);
+            border: 1px solid var(--danger-red);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-cancel:hover { background: #f9fafb; }
+        .btn-confirm:hover { background: #dc2626; }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border-color);
+            background: var(--header-bg);
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="brand">
+            <div class="brand-icon">O</div>
+            <span>OFFICE<span style="font-weight:400">GAMES</span></span>
+        </div>
+        
+        <div class="profile-container">
+            <div class="user-profile" onclick="toggleProfileMenu(event)">
+                <span id="employee-id">Authenticating...</span>
+                <div class="avatar">EP</div>
+            </div>
+            
+            <div class="profile-menu" id="profileMenu">
+                <div class="menu-item danger" onclick="openResetModal()">
+                    <span>🗑️ Clear All High Scores</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <div class="dashboard-header">
+            <h1>Workspace Dashboard</h1>
+            <div class="subtitle">Complete your assigned compliance modules and tasks.</div>
+        </div>
+
+        <div class="games-grid" id="games-container">
+            <!-- Cards Injected via JS -->
+        </div>
+    </main>
+
+    <!-- Reset Confirmation Modal -->
+    <div id="reset-modal">
+        <div class="modal-content">
+            <div class="modal-title">Confirm Data Purge</div>
+            <div class="modal-desc">Are you sure you want to delete all performance records? This action cannot be undone. Your Employee ID will be retained.</div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeResetModal()">Cancel</button>
+                <button class="btn-confirm" onclick="performReset()">Delete Records</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; <span id="year"></span> Gravity Systems | Internal Use Only | Created By Pritish & GenAI
+    </footer>
+
+    <script>
+        // --- Configuration ---
+        const modules = [
+            {
+                id: 'wiring',
+                title: 'Electrical Maintenance',
+                description: 'Resolve connectivity issues in the server room distribution box. Failure to complete results in productivity loss.',
+                icon: '⚡',
+                color: '#fffbeb', // Light yellow bg for icon
+                iconColor: '#d97706',
+                url: '/connecting-wires/index.html',
+                status: 'active',
+                priority: 'High'
+            },
+            {
+                id: 'chess',
+                title: 'Tactical Assessment',
+                description: 'Strategic cognitive calibration. Solve tactical scenarios to optimize decision-making logic.',
+                icon: '♞',
+                color: '#eef2ff', // Indigo-ish bg
+                iconColor: '#4f46e5', // Indigo icon
+                url: '/chess-puzzles/index.html',
+                status: 'active',
+                priority: 'High'
+            },
+            {
+                id: 'coffee',
+                title: 'Caffeine Procurement',
+                description: 'Navigate the office floor plan to acquire liquid energy resources. Use donuts to distract management protocols.',
+                icon: '☕',
+                color: '#fff7ed', 
+                iconColor: '#c2410c',
+                url: '/coffee-game/index.html',
+                status: 'active',
+                priority: 'Medium'
+            },
+            {
+                id: 'files',
+                title: 'Data Archival',
+                description: 'Sort confidential client files into appropriate encryption folders. Maintain 100% accuracy to prevent data corruption.',
+                icon: '📂',
+                color: '#eff6ff', 
+                iconColor: '#2563eb',
+                url: '/data-sorter/index.html',
+                status: 'active',
+                priority: 'Medium'
+            },
+            {
+                id: 'trash',
+                title: 'Sanitation Protocol',
+                description: 'Manual override of the waste disposal chute required. Clear obstruction immediately to prevent overflow.',
+                icon: '🗑️',
+                color: '#f3f4f6', 
+                iconColor: '#4b5563',
+                url: '/cleaning-systems/index.html',
+                status: 'active',
+                priority: 'Low'
+            },
+            {
+                id: 'network',
+                title: 'Network Defense',
+                description: 'Firewall breach imminent. Reroute data packets to secure nodes before intrusion detection systems fail.',
+                icon: '🌐',
+                color: '#ecfeff', // Cyan-ish
+                iconColor: '#0891b2',
+                url: '#',
+                status: 'locked',
+                priority: 'High'
+            },
+            {
+                id: 'printer',
+                title: 'Printer Calibration',
+                description: 'Device PC_LOAD_LETTER error. Perform percussive maintenance to realign internal components.',
+                icon: '🖨️',
+                color: '#fdf2f8', // Pink-ish
+                iconColor: '#db2777',
+                url: '#',
+                status: 'locked',
+                priority: 'Low'
+            }
+        ];
+
+        function initPortal() {
+            document.getElementById('year').textContent = new Date().getFullYear();
+            setupIdentity();
+            renderModules();
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                const profileContainer = document.querySelector('.profile-container');
+                if (!profileContainer.contains(event.target)) {
+                    document.getElementById('profileMenu').classList.remove('show');
+                }
+            });
+        }
+
+        // --- Identity Management ---
+        function setupIdentity() {
+            const idElement = document.getElementById('employee-id');
+            const storageKey = 'gravity_employee_id';
+            
+            let identity = localStorage.getItem(storageKey);
+            
+            if (!identity) {
+                const randomId = Math.floor(Math.random() * 9000) + 1000;
+                identity = `Employee #${randomId}`;
+                localStorage.setItem(storageKey, identity);
+            }
+            
+            idElement.textContent = identity;
+        }
+
+        // --- Profile Actions ---
+        function toggleProfileMenu(e) {
+            e.stopPropagation();
+            document.getElementById('profileMenu').classList.toggle('show');
+        }
+
+        function openResetModal() {
+            document.getElementById('profileMenu').classList.remove('show');
+            document.getElementById('reset-modal').style.display = 'flex';
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').style.display = 'none';
+        }
+
+        function performReset() {
+            // 1. Get current ID
+            const currentID = localStorage.getItem('gravity_employee_id');
+            
+            // 2. Clear all
+            localStorage.clear();
+            
+            // 3. Restore ID
+            if (currentID) {
+                localStorage.setItem('gravity_employee_id', currentID);
+            } else {
+                setupIdentity(); // Fallback
+            }
+            
+            // 4. Close & UI feedback
+            closeResetModal();
+            alert("System records purged successfully.");
+        }
+
+        function renderModules() {
+            const container = document.getElementById('games-container');
+            container.innerHTML = '';
+
+            modules.forEach(mod => {
+                const isLocked = mod.status === 'locked';
+                const cardTag = isLocked ? 'div' : 'a'; 
+                const cardClass = isLocked ? 'module-card disabled' : 'module-card';
+                const statusClass = isLocked ? 'status-locked' : 'status-active';
+                const statusText = isLocked ? 'Locked' : 'Assigned';
+                const btnText = isLocked ? 'Access Denied' : 'Initialize Task';
+                const hrefAttr = isLocked ? '' : `href="${mod.url}"`;
+                
+                let priorityClass = '';
+                if(mod.priority === 'High') priorityClass = 'priority-high';
+                else if(mod.priority === 'Medium') priorityClass = 'priority-med';
+
+                const html = `
+                    <${cardTag} ${hrefAttr} class="${cardClass}">
+                        <div class="card-header">
+                            <div class="icon-box" style="background-color: ${mod.color}; color: ${mod.iconColor}; border-color: ${mod.color}">
+                                ${mod.icon}
+                            </div>
+                            <div class="status-badge ${statusClass}">${statusText}</div>
+                        </div>
+                        
+                        <div class="module-title">${mod.title}</div>
+                        <div class="module-desc">${mod.description}</div>
+                        
+                        <div class="action-area">
+                            <div class="priority-level ${priorityClass}">Priority: ${mod.priority}</div>
+                            <div class="launch-btn">${btnText}</div>
+                        </div>
+                    </${cardTag}>
+                `;
+
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        initPortal();
+
+    </script>
+</body>
+</html>

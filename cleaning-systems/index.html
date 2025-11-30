@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanitation Protocol | The Office Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            /* Industrial Corporate Palette */
+            --bg-color: #f1f5f9;
+            --panel-bg: #e2e8f0;
+            --chute-bg: #1e293b;
+            --text-primary: #0f172a;
+            --text-light: #f8fafc;
+            --accent-blue: #0ea5e9; /* Sky Blue */
+            --accent-danger: #ef4444;
+            --accent-warning: #f59e0b;
+            --border-color: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- Header --- */
+        header {
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1.5rem;
+            z-index: 50;
+        }
+
+        .brand { font-weight: 800; font-size: 1rem; color: #334155; display: flex; align-items: center; gap: 8px; }
+        .brand span { color: var(--accent-blue); }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: #f0f9ff; }
+
+        /* --- Main Layout --- */
+        .facility-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
+
+        /* --- Control Panel (Left) --- */
+        .control-panel {
+            width: 300px;
+            background: #cbd5e1;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border-right: 2px solid #94a3b8;
+            box-shadow: inset -5px 0 10px rgba(0,0,0,0.05);
+        }
+
+        .panel-header {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            font-weight: 700;
+            border-bottom: 2px solid #94a3b8;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* Gauges */
+        .gauge-container {
+            background: #e2e8f0;
+            border: 1px solid #94a3b8;
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+        }
+
+        .pressure-label { font-size: 0.9rem; font-weight: 600; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .pressure-val { font-family: monospace; font-size: 1.1rem; }
+
+        .pressure-bar-bg { height: 12px; background: #334155; border-radius: 6px; overflow: hidden; border: 1px solid #fff; }
+        .pressure-bar-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #eab308, #ef4444); width: 0%; transition: width 0.1s linear; }
+
+        .stat-row { display: flex; justify-content: space-between; margin-top: 5px; font-size: 0.85rem; }
+
+        /* Warning Light */
+        .warning-light {
+            width: 100%;
+            padding: 10px;
+            background: #334155;
+            color: #64748b;
+            text-align: center;
+            font-weight: 700;
+            border-radius: 4px;
+            border: 2px solid #1e293b;
+            margin-top: auto;
+            transition: all 0.2s;
+        }
+        .warning-light.active { background: #ef4444; color: white; animation: flash 0.5s infinite alternate; box-shadow: 0 0 15px #ef4444; border-color: #991b1b; }
+
+        @keyframes flash { from { opacity: 1; } to { opacity: 0.7; } }
+
+        /* --- Chute Area (Center) --- */
+        .chute-wrapper {
+            flex: 1;
+            background: #94a3b8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            /* Industrial texture pattern */
+            background-image: radial-gradient(#64748b 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .chute-container {
+            width: 400px;
+            height: 100%;
+            background: var(--chute-bg);
+            border-left: 8px solid #475569;
+            border-right: 8px solid #475569;
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* Danger Line */
+        .danger-line {
+            position: absolute;
+            top: 15%; /* Corresponds to 85% capacity usage */
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: transparent;
+            border-top: 2px dashed rgba(239, 68, 68, 0.5);
+            z-index: 5;
+            pointer-events: none;
+        }
+        .danger-line::after {
+            content: "MAX CAPACITY (100%)";
+            position: absolute;
+            right: 5px;
+            top: -15px;
+            color: rgba(239, 68, 68, 0.7);
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        /* Canvas */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Tutorial Modal */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal {
+            background: white;
+            width: 400px;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal h2 { margin-top: 0; color: #0f172a; }
+        .modal p { color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }
+        
+        .legend { display: flex; gap: 15px; justify-content: center; margin-bottom: 2rem; }
+        .legend-item { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 0.8rem; font-weight: 600; }
+        .legend-icon { font-size: 2rem; }
+
+        .start-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        .start-btn:hover { background: #0284c7; }
+
+        /* Toaster */
+        #feedback {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 12px 24px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            font-weight: 600;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #feedback.show { transform: translateX(0); }
+        .toast-success { border-left: 4px solid #22c55e; color: #166534; }
+        .toast-error { border-left: 4px solid #ef4444; color: #991b1b; }
+
+        /* Footer */
+        .footer-panel {
+            position: absolute;
+            bottom: 10px;
+            left: 20px;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .facility-container { flex-direction: column; }
+            .control-panel { width: 100%; height: auto; flex-direction: row; padding: 10px; border-right: none; border-bottom: 2px solid #94a3b8; align-items: center; }
+            .gauge-container { flex: 1; padding: 0.5rem; }
+            .panel-header, .warning-light { display: none; }
+            .chute-container { width: 100%; border: none; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-left"><button class="nav-btn" onclick="goHome()">Home</button></div>
+        <div class="brand"><span>SANITATION</span> PROTOCOL</div>
+        <div class="nav-right"><button class="nav-btn" onclick="resetGame()">System Reset</button></div>
+    </header>
+
+    <div class="facility-container">
+        <!-- Control Panel -->
+        <aside class="control-panel">
+            <div class="panel-header">System Status</div>
+            
+            <div class="gauge-container">
+                <div class="pressure-label">Chute Load <span class="pressure-val" id="load-val">0%</span></div>
+                <div class="pressure-bar-bg">
+                    <div class="pressure-bar-fill" id="load-bar"></div>
+                </div>
+            </div>
+
+            <div class="gauge-container">
+                <div class="pressure-label">Incinerated <span class="pressure-val" id="score-val">0kg</span></div>
+                <div class="stat-row">
+                    <span>Assets Recovered:</span>
+                    <span style="font-weight:700; color:#0ea5e9" id="assets-val">0</span>
+                </div>
+            </div>
+
+            <div class="gauge-container">
+                <div class="pressure-label">Shift Duration</div>
+                <div class="stat-row">
+                    <span id="time-val">00:00</span>
+                </div>
+            </div>
+
+            <div class="warning-light" id="jam-alert">
+                ⚠ JAM DETECTED
+            </div>
+
+            <div class="footer-panel">
+                © <span id="year"></span> Gravity Systems
+            </div>
+        </aside>
+
+        <!-- The Chute -->
+        <main class="chute-wrapper">
+            <div class="chute-container">
+                <div class="danger-line"></div>
+                <canvas id="gameCanvas"></canvas>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal-overlay">
+        <div class="modal">
+            <h2>Waste Management Training</h2>
+            <p>Debris is clogging the main chute. Manually disintegrate trash by clicking it before the system overflows.</p>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-icon">📦</span>
+                    <span>TRASH</span>
+                    <span style="color:#ef4444; font-size:0.7rem;">(CLICK)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon">💾</span>
+                    <span>ASSET</span>
+                    <span style="color:#0ea5e9; font-size:0.7rem;">(IGNORE)</span>
+                </div>
+            </div>
+
+            <button class="start-btn" onclick="startGame()">START SHIFT</button>
+        </div>
+    </div>
+
+    <div id="feedback">System Ready</div>
+
+    <script>
+        // --- Constants & Config ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Configurable Thresholds
+        const JAM_THRESHOLD = 75; // Warning starts here
+        const CRITICAL_THRESHOLD = 100; // Game Over here
+
+        // Items definition
+        const ITEMS = [
+            { type: 'trash', icon: '📦', color: '#a8a29e', points: 10, mass: 5 },
+            { type: 'trash', icon: '🗑️', color: '#78716c', points: 15, mass: 4 },
+            { type: 'trash', icon: '🍌', color: '#facc15', points: 5, mass: 2 },
+            { type: 'asset', icon: '💾', color: '#3b82f6', points: -50, mass: 3 }, // Hard Drive
+            { type: 'asset', icon: '💳', color: '#3b82f6', points: -50, mass: 2 }  // ID Card
+        ];
+
+        // --- State ---
+        let objects = [];
+        let score = 0;
+        let assetsRecovered = 0;
+        let gameActive = false;
+        let lastTime = 0;
+        let spawnTimer = 0;
+        let spawnRate = 1000; // ms
+        let gameTime = 0;
+        let chuteLoad = 0; // 0 to 100
+        let smoothLoad = 0; // Smoothing for UI
+        let chuteHeight = 0;
+        let feedbackTimeout;
+
+        // Physics constants
+        const GRAVITY = 0.2;
+        const FRICTION = 0.9;
+        const TERMINAL_VELOCITY = 8;
+
+        // --- Init ---
+        function init() {
+            document.getElementById('year').textContent = new Date().getFullYear();
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Interaction
+            canvas.addEventListener('mousedown', handleClick);
+            canvas.addEventListener('touchstart', handleClick); // Mobile support
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            chuteHeight = canvas.height;
+        }
+
+        function startGame() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            resetState();
+            gameActive = true;
+            lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }
+
+        function resetState() {
+            objects = [];
+            score = 0;
+            assetsRecovered = 0;
+            spawnRate = 1000;
+            gameTime = 0;
+            chuteLoad = 0;
+            smoothLoad = 0;
+            updateUI();
+            document.getElementById('jam-alert').classList.remove('active');
+        }
+
+        // --- Game Loop ---
+        function loop(timestamp) {
+            if (!gameActive) return;
+
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+            gameTime += dt;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(loop);
+        }
+
+        function update(dt) {
+            // Spawning
+            spawnTimer += dt;
+            // Increase difficulty over time
+            const currentSpawnRate = Math.max(400, 1000 - (gameTime / 100)); // Gets faster
+            
+            if (spawnTimer > currentSpawnRate) {
+                spawnObject();
+                spawnTimer = 0;
+            }
+
+            // Update Physics
+            let highestPoint = chuteHeight; // Start from bottom
+
+            objects.forEach(obj => {
+                // Apply Gravity
+                if (obj.y < chuteHeight - obj.size) { // If not on floor
+                    obj.vy += GRAVITY;
+                    obj.vy = Math.min(obj.vy, TERMINAL_VELOCITY);
+                } else {
+                    // Hit Floor (Recovery for assets)
+                    if (obj.type === 'asset' && !obj.processed) {
+                        obj.processed = true;
+                        assetsRecovered++;
+                        obj.toRemove = true; // Recovered successfully
+                        showToast(true, "Asset Recovered");
+                    } else if (obj.type === 'trash') {
+                        // Trash piles up on floor
+                        obj.vy = 0;
+                        obj.y = chuteHeight - obj.size;
+                    }
+                }
+
+                // Simple collision with other objects (stacking)
+                // Very basic 1D stacking logic for simplicity
+                objects.forEach(other => {
+                    if (obj === other || other.toRemove) return;
+                    
+                    // Check vertical overlap + horizontal overlap
+                    if (Math.abs(obj.x - other.x) < (obj.size + other.size)/1.5) {
+                        if (obj.y < other.y && obj.y + obj.size > other.y) {
+                            obj.y = other.y - obj.size;
+                            obj.vy = 0;
+                        }
+                    }
+                });
+
+                obj.y += obj.vy;
+
+                // Track highest point of TRASH pile
+                if (obj.type === 'trash' && obj.vy === 0) {
+                    if (obj.y < highestPoint) highestPoint = obj.y;
+                }
+            });
+
+            // Cleanup removed objects
+            objects = objects.filter(o => !o.toRemove);
+
+            // Calculate Load
+            const pileHeight = chuteHeight - highestPoint;
+            // Max safe height is 85% of screen (15% from top is danger line)
+            const maxPile = chuteHeight * 0.85; 
+            
+            // FIX: Removed Math.min(100, ...) so load can exceed 100% to trigger Game Over properly
+            chuteLoad = (pileHeight / maxPile) * 100;
+
+            // Smoothing for UI
+            smoothLoad += (chuteLoad - smoothLoad) * 0.1;
+
+            // Check Game Over & Warnings
+            // Use chuteLoad (instant) or smoothLoad (animated)? 
+            // Using smoothLoad feels better but ensure it crosses threshold. 
+            // Since chuteLoad is now uncapped, smoothLoad will cross 100.
+            if (smoothLoad >= CRITICAL_THRESHOLD) {
+                gameOver("CHUTE OVERFLOW. CRITICAL FAILURE.");
+            } else if (smoothLoad >= JAM_THRESHOLD) {
+                document.getElementById('jam-alert').classList.add('active');
+            } else {
+                document.getElementById('jam-alert').classList.remove('active');
+            }
+
+            updateUI();
+        }
+
+        function spawnObject() {
+            // 20% Chance for Asset
+            const isAsset = Math.random() < 0.2;
+            const pool = ITEMS.filter(i => isAsset ? i.type === 'asset' : i.type === 'trash');
+            const template = pool[Math.floor(Math.random() * pool.length)];
+
+            const size = 40;
+            const x = Math.random() * (canvas.width - size); // Random X
+
+            objects.push({
+                x: x,
+                y: -50,
+                vy: 2,
+                size: size,
+                ...template,
+                id: Math.random()
+            });
+        }
+
+        function handleClick(e) {
+            if (!gameActive) return;
+
+            const rect = canvas.getBoundingClientRect();
+            let clickX, clickY;
+
+            if (e.type === 'touchstart') {
+                clickX = e.touches[0].clientX - rect.left;
+                clickY = e.touches[0].clientY - rect.top;
+                e.preventDefault();
+            } else {
+                clickX = e.clientX - rect.left;
+                clickY = e.clientY - rect.top;
+            }
+
+            // Check if clicked an object
+            // Iterate backwards to click top items first
+            for (let i = objects.length - 1; i >= 0; i--) {
+                const obj = objects[i];
+                if (
+                    clickX >= obj.x && 
+                    clickX <= obj.x + obj.size &&
+                    clickY >= obj.y && 
+                    clickY <= obj.y + obj.size
+                ) {
+                    processClick(obj);
+                    break; // Only click one at a time
+                }
+            }
+        }
+
+        function processClick(obj) {
+            if (obj.type === 'trash') {
+                // Good click
+                score += obj.points;
+                obj.toRemove = true;
+                createExplosion(obj.x + obj.size/2, obj.y + obj.size/2, '#cbd5e1');
+            } else {
+                // Bad click (Asset)
+                score -= 50; // Penalty
+                showToast(false, "Asset Destroyed! Warning Issued.");
+                obj.toRemove = true; // Still destroyed
+                createExplosion(obj.x + obj.size/2, obj.y + obj.size/2, '#ef4444');
+            }
+        }
+
+        // --- Visuals ---
+        let particles = [];
+
+        function createExplosion(x, y, color) {
+            for(let i=0; i<8; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Objects
+            objects.forEach(obj => {
+                // Simple box
+                ctx.fillStyle = obj.color;
+                ctx.fillRect(obj.x, obj.y, obj.size, obj.size);
+                
+                // Icon
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(obj.icon, obj.x + obj.size/2, obj.y + obj.size/2);
+                
+                // Border
+                ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                ctx.strokeRect(obj.x, obj.y, obj.size, obj.size);
+            });
+
+            // Draw Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+                ctx.fill();
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                if(p.life <= 0) particles.splice(i, 1);
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        // --- UI & Helpers ---
+        function updateUI() {
+            // Visual clamping for UI only (so it doesn't show 105% briefly before death, or do we want that? Let's clamp text)
+            const displayLoad = Math.min(100, Math.round(smoothLoad));
+            
+            document.getElementById('load-val').textContent = displayLoad + '%';
+            document.getElementById('load-bar').style.width = displayLoad + '%';
+            
+            // Color bar
+            const bar = document.getElementById('load-bar');
+            if(smoothLoad > JAM_THRESHOLD) bar.style.background = '#ef4444';
+            else if(smoothLoad > 50) bar.style.background = '#eab308';
+            else bar.style.background = '#22c55e';
+
+            document.getElementById('score-val').textContent = score + 'kg';
+            document.getElementById('assets-val').textContent = assetsRecovered;
+            
+            // Time
+            const totalSeconds = Math.floor(gameTime / 1000);
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('time-val').textContent = `${m}:${s}`;
+        }
+
+        function showToast(isSuccess, msg) {
+            const fb = document.getElementById('feedback');
+            fb.innerHTML = isSuccess ? '<span>✓</span> ' + msg : '<span>✕</span> ' + msg;
+            fb.className = isSuccess ? 'toast-success show' : 'toast-error show';
+            
+            if (feedbackTimeout) clearTimeout(feedbackTimeout);
+            feedbackTimeout = setTimeout(() => {
+                fb.classList.remove('show');
+            }, 2000);
+        }
+
+        function gameOver(msg) {
+            gameActive = false;
+            document.getElementById('modal-overlay').style.display = 'flex';
+            document.querySelector('.modal h2').textContent = "SYSTEM HALTED";
+            document.querySelector('.modal p').textContent = `${msg} Total Processed: ${score}kg.`;
+            document.querySelector('.start-btn').textContent = "REBOOT SYSTEM";
+        }
+
+        function resetGame() {
+            document.getElementById('modal-overlay').style.display = 'flex';
+            document.querySelector('.modal h2').textContent = "Waste Management Training";
+            document.querySelector('.modal p').textContent = "Debris is clogging the main chute. Manually disintegrate trash by clicking it before the system overflows.";
+            document.querySelector('.start-btn').textContent = "START SHIFT";
+            gameActive = false;
+        }
+
+        function goHome() {
+            window.location.href = '/index.html';
+        }
+
+        init();
+
+    </script>
+</body>
+</html>

@@ -238,7 +238,7 @@ function nextLevel() {
 
 // --- UI Functions ---
 function triggerHome() {
-    window.location.href = 'fg/index.html';
+    window.location.href = '../index.html';
 }
 
 function triggerReset() {

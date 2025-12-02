@@ -2,9 +2,238 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wire Connect Task</title>
-    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --panel-bg: #404040;
+            --panel-border: #757575;
+            --text-color: #ffffff;
+            --connector-gold: #cfaa28;
+            --btn-blue: #3498db;
+            --btn-red: #e74c3c;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#333 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Varela Round', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: var(--text-color);
+            user-select: none;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        /* Game Board Container */
+        #game-board {
+            position: relative;
+            width: 400px;
+            max-width: 95vw; /* Mobile friendly width */
+            height: 550px;
+            max-height: 80vh;
+            background-color: var(--panel-bg);
+            border: 8px solid #222;
+            border-radius: 4px;
+            box-shadow: 0 0 0 4px #555, 0 20px 50px rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: space-between;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: none; /* Critical: Prevents scrolling while dragging */
+        }
+
+        /* Panel details */
+        #game-board::before, #game-board::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #888;
+            border-radius: 50%;
+            box-shadow: inset 1px 1px 2px #000;
+            z-index: 5;
+        }
+        #game-board::before { top: 10px; left: 10px; box-shadow: 360px 0 0 #888, inset 1px 1px 2px #000; }
+        #game-board::after { bottom: 10px; left: 10px; box-shadow: 360px 0 0 #888, inset 1px 1px 2px #000; }
+
+        /* SVG Layer */
+        #wire-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Let clicks pass through */
+            z-index: 10;
+            filter: drop-shadow(0px 5px 3px rgba(0,0,0,0.5));
+        }
+
+        /* Columns */
+        .column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            z-index: 20;
+            height: 100%;
+            width: 70px; /* Slightly wider for touch targets */
+            padding: 20px 0;
+            box-sizing: border-box;
+        }
+        
+        .socket-container {
+            width: 100%;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .socket {
+            width: 44px; /* Larger touch target */
+            height: 100%;
+            background: #5a5a5a;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: rgba(0,0,0,0.5);
+            font-weight: bold;
+            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5), inset -1px -1px 2px rgba(255,255,255,0.1);
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            transition: filter 0.2s;
+            touch-action: none; /* Prevent browser handling */
+        }
+        
+        .column-left .socket {
+            border-radius: 0 10px 10px 0;
+            border-left: none;
+            border-right: 4px solid #333;
+            margin-left: -5px;
+        }
+        
+        .column-right .socket {
+            border-radius: 10px 0 0 10px;
+            border-right: none;
+            border-left: 4px solid #333;
+            margin-right: -5px;
+        }
+
+        .socket:active { filter: brightness(1.2); }
+
+        .wire-base {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 5px rgba(0,0,0,0.2), 0 0 5px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: rgba(0,0,0,0.6);
+            pointer-events: none; /* Ensure clicks go to parent .socket */
+        }
+
+        /* Win Overlay */
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(2px);
+        }
+
+        .task-complete-text {
+            font-family: 'Varela Round', sans-serif;
+            color: #55ff55;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #55ff55;
+            letter-spacing: 2px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+        }
+        
+        .total-tasks {
+            margin-top: 10px;
+            font-size: 1.2rem;
+            color: #ddd;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* UI Controls */
+        header {
+            position: absolute;
+            top: 15px;
+            color: #888;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            text-align: center;
+            width: 100%;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .ui-btn {
+            position: absolute;
+            top: 15px;
+            background: none;
+            border: 2px solid #666;
+            border-radius: 5px;
+            color: #888;
+            padding: 8px 16px; /* Larger hit area */
+            cursor: pointer;
+            font-family: 'Varela Round', sans-serif;
+            font-size: 0.8rem;
+            z-index: 150;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-weight: bold;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .ui-btn:hover, .ui-btn:active {
+            color: #fff;
+            border-color: #fff;
+            background: rgba(255,255,255,0.1);
+        }
+
+        #home-btn { left: 20px; }
+        #reset-btn { right: 20px; }
+
+        footer {
+            position: absolute;
+            bottom: 15px;
+            color: #666;
+            font-size: 0.8rem;
+            text-align: center;
+            width: 100%;
+            opacity: 0.8;
+            z-index: 50;
+        }
+
+    </style>
 </head>
 <body>
 
@@ -30,6 +259,289 @@
         &copy; <span id="year"></span> Gravity | Created By Pritish
     </footer>
 
-    <script src="app.js" defer></script>
+    <script>
+        // --- Configuration ---
+        const wireTypes = [
+            { color: '#ff0000', symbol: '■' },
+            { color: '#1111ff', symbol: '▲' },
+            { color: '#ffe100', symbol: '★' },
+            { color: '#ff00ff', symbol: '●' },
+            { color: '#00ff00', symbol: '♦' },
+            { color: '#ff6600', symbol: '✚' },
+            { color: '#00ffff', symbol: '▼' },
+            { color: '#ffffff', symbol: '♠' }
+        ];
+        
+        // --- State ---
+        let currentLevel = 1;
+        let highScore = 1;
+        let activeWire = null;
+        let connections = []; 
+        let isDragging = false;
+        let startSocket = null;
+        let isTransitioning = false;
+
+        // --- DOM Elements ---
+        const leftCol = document.getElementById('left-col');
+        const rightCol = document.getElementById('right-col');
+        const svgCanvas = document.getElementById('wire-canvas');
+        const overlay = document.getElementById('overlay');
+        const levelDisplay = document.getElementById('level-indicator');
+        const highScoreDisplay = document.getElementById('high-score');
+        const yearDisplay = document.getElementById('year');
+
+        // --- Initialization ---
+        function initApp() {
+            yearDisplay.textContent = new Date().getFullYear();
+            const storedScore = localStorage.getItem('wiringHighScore');
+            if (storedScore) highScore = parseInt(storedScore, 10);
+            highScoreDisplay.textContent = highScore;
+            initGame();
+        }
+
+        function initGame() {
+            leftCol.innerHTML = '';
+            rightCol.innerHTML = '';
+            svgCanvas.innerHTML = '';
+            connections = [];
+            overlay.style.display = 'none';
+            levelDisplay.textContent = currentLevel;
+            isTransitioning = false;
+
+            const wireCount = Math.min(wireTypes.length, 3 + Math.floor(currentLevel / 2));
+            const shuffledTypes = [...wireTypes].sort(() => Math.random() - 0.5);
+            const levelWires = shuffledTypes.slice(0, wireCount);
+
+            levelWires.forEach(type => createSocket(leftCol, type, 'left'));
+
+            const rightWires = [...levelWires].sort(() => Math.random() - 0.5);
+            rightWires.forEach(type => createSocket(rightCol, type, 'right'));
+        }
+
+        function createSocket(container, type, side) {
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'socket-container';
+
+            const socket = document.createElement('div');
+            socket.classList.add('socket');
+            socket.dataset.color = type.color;
+            socket.dataset.side = side;
+
+            const wireBase = document.createElement('div');
+            wireBase.className = 'wire-base';
+            wireBase.style.backgroundColor = type.color;
+            
+            if (['#ffe100', '#00ffff', '#ffffff', '#00ff00'].includes(type.color)) {
+                wireBase.style.color = 'black';
+            } else {
+                wireBase.style.color = 'white';
+            }
+            wireBase.textContent = type.symbol;
+            
+            socket.appendChild(wireBase);
+            containerDiv.appendChild(socket);
+            container.appendChild(containerDiv);
+
+            // Add Event Listeners
+            // For mobile, we attach specific touch listeners directly to sockets
+            if (side === 'left') {
+                socket.addEventListener('mousedown', handleDragStart);
+                socket.addEventListener('touchstart', handleDragStart, {passive: false});
+            } else {
+                // Right sockets just need to exist to be detected by coordinates
+                socket.addEventListener('mouseup', handleDragEnd);
+                socket.addEventListener('touchend', handleDragEnd, {passive: false});
+            }
+        }
+
+        // --- Interaction Logic ---
+        function handleDragStart(e) {
+            if (isTransitioning) return;
+            
+            // Prevent default browser scrolling/zooming
+            if(e.type === 'touchstart') e.preventDefault();
+
+            const target = e.target.closest('.socket');
+            if (!target || target.dataset.connected === 'true') return;
+
+            isDragging = true;
+            startSocket = target;
+            
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('stroke', startSocket.dataset.color);
+            path.setAttribute('stroke-width', '14'); 
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-linecap', 'round');
+            path.style.filter = 'drop-shadow(0 0 2px rgba(0,0,0,0.5))'; 
+            path.style.pointerEvents = 'none'; // Essential for elementFromPoint to work through the wire
+            
+            svgCanvas.appendChild(path);
+            activeWire = path;
+
+            updateWire(e);
+
+            // Bind global move/up events
+            if (e.type === 'touchstart') {
+                document.addEventListener('touchmove', handleDragMove, {passive: false});
+                document.addEventListener('touchend', handleDragEnd, {passive: false});
+            } else {
+                document.addEventListener('mousemove', handleDragMove);
+                document.addEventListener('mouseup', handleDragEnd);
+            }
+        }
+
+        function handleDragMove(e) {
+            if (!isDragging) return;
+            e.preventDefault(); // Stop scrolling on mobile
+            updateWire(e);
+        }
+
+        function updateWire(e) {
+            if (!startSocket || !activeWire) return;
+            const startRect = startSocket.getBoundingClientRect();
+            const boardRect = document.getElementById('game-board').getBoundingClientRect();
+            
+            // Center of start socket
+            const startX = startRect.left + startRect.width / 2 - boardRect.left;
+            const startY = startRect.top + startRect.height / 2 - boardRect.top;
+
+            let clientX, clientY;
+            if (e.type === 'touchmove' || e.type === 'touchstart') {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            const mouseX = clientX - boardRect.left;
+            const mouseY = clientY - boardRect.top;
+            
+            // Bezier Curve
+            const controlOffset = Math.abs(mouseX - startX) * 0.5; 
+            const d = `M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${mouseX - controlOffset} ${mouseY}, ${mouseX} ${mouseY}`;
+            activeWire.setAttribute('d', d);
+        }
+
+        function handleDragEnd(e) {
+            if (!isDragging || !startSocket) return;
+            
+            // On touch devices, touchend doesn't have coordinates in 'touches', use 'changedTouches'
+            let clientX, clientY;
+            if (e.type === 'touchend') {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            // --- SMART PROXIMITY CHECK ---
+            // 1. Identify the correct target based on color
+            const targetColor = startSocket.dataset.color;
+            const rightSockets = Array.from(document.querySelectorAll('.column-right .socket'));
+            const correctTarget = rightSockets.find(s => s.dataset.color === targetColor);
+
+            let isSuccess = false;
+
+            if (correctTarget && correctTarget.dataset.connected !== 'true') {
+                // 2. Calculate distance to the correct target center
+                const rect = correctTarget.getBoundingClientRect();
+                const targetCenterX = rect.left + rect.width / 2;
+                const targetCenterY = rect.top + rect.height / 2;
+                
+                const distance = Math.hypot(clientX - targetCenterX, clientY - targetCenterY);
+                
+                // 3. Check threshold (75px is generous for mobile touch)
+                const SNAP_THRESHOLD = 75;
+
+                if (distance < SNAP_THRESHOLD) {
+                    isSuccess = true;
+                    
+                    // Snap wire visually to center
+                    snapWireToTarget(correctTarget);
+                    
+                    // Update Logic
+                    startSocket.dataset.connected = 'true';
+                    correctTarget.dataset.connected = 'true';
+                    
+                    // Visual Feedback
+                    startSocket.style.opacity = '1';
+                    startSocket.style.cursor = 'default';
+                    correctTarget.style.cursor = 'default';
+
+                    connections.push(activeWire);
+                    checkWin();
+                }
+            }
+
+            if (!isSuccess) {
+                // Failed connection (too far or wrong socket)
+                if(activeWire) activeWire.remove();
+            }
+            
+            cleanUpDrag();
+        }
+
+        function snapWireToTarget(targetSocket) {
+            const startRect = startSocket.getBoundingClientRect();
+            const targetRect = targetSocket.getBoundingClientRect();
+            const boardRect = document.getElementById('game-board').getBoundingClientRect();
+            const startX = startRect.left + startRect.width / 2 - boardRect.left;
+            const startY = startRect.top + startRect.height / 2 - boardRect.top;
+            const endX = targetRect.left + targetRect.width / 2 - boardRect.left;
+            const endY = targetRect.top + targetRect.height / 2 - boardRect.top;
+            const dist = Math.abs(endX - startX);
+            const controlOffset = dist * 0.5;
+            const d = `M ${startX} ${startY} C ${startX + controlOffset} ${startY}, ${endX - controlOffset} ${endY}, ${endX} ${endY}`;
+            activeWire.setAttribute('d', d);
+        }
+
+        function cleanUpDrag() {
+            isDragging = false;
+            startSocket = null;
+            activeWire = null;
+            document.removeEventListener('mousemove', handleDragMove);
+            document.removeEventListener('mouseup', handleDragEnd);
+            document.removeEventListener('touchmove', handleDragMove);
+            document.removeEventListener('touchend', handleDragEnd);
+        }
+
+        function checkWin() {
+            const totalWires = document.querySelectorAll('.column-left .socket').length;
+            if (connections.length === totalWires) {
+                isTransitioning = true;
+                setTimeout(() => {
+                    overlay.style.display = 'flex';
+                    setTimeout(() => {
+                        nextLevel();
+                    }, 1500);
+                }, 300);
+            }
+        }
+
+        function nextLevel() {
+            currentLevel++;
+            if (currentLevel > highScore) {
+                highScore = currentLevel;
+                localStorage.setItem('wiringHighScore', highScore);
+                highScoreDisplay.textContent = highScore;
+            }
+            initGame();
+        }
+
+        // --- UI Functions ---
+        
+        function triggerHome() {
+            window.location.href = '../index.html';
+        }
+
+        function triggerReset() {
+            currentLevel = 1;
+            initGame();
+        }
+
+        initApp();
+    </script>
 </body>
 </html>

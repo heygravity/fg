@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Network Defense | The Office Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+
+        :root {
+            --bg-color: #020617; /* Deep Navy/Black */
+            --grid-line: #1e293b;
+            --text-primary: #e2e8f0;
+            --accent-cyan: #06b6d4;
+            --accent-red: #ef4444;
+            --accent-green: #22c55e;
+            --ui-panel: rgba(15, 23, 42, 0.9);
+            --border-color: #334155;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            touch-action: none; /* Disables browser gestures */
+        }
+
+        /* --- UI Overlay --- */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .status-panel {
+            background: var(--ui-panel);
+            border: 1px solid var(--accent-cyan);
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+            pointer-events: auto;
+            min-width: 250px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-label { color: #94a3b8; text-transform: uppercase; }
+        .stat-val { font-weight: 700; color: var(--accent-cyan); }
+        .stat-val.danger { color: var(--accent-red); animation: pulse 1s infinite; }
+
+        .health-bar-container {
+            width: 100%; /* Flexible width */
+            min-width: 150px;
+            height: 6px;
+            background: #1e293b;
+            margin-top: 5px;
+            position: relative;
+        }
+        
+        .health-bar-fill {
+            height: 100%;
+            background: var(--accent-green);
+            width: 100%;
+            transition: width 0.2s, background 0.2s;
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        /* Controls */
+        .controls-panel {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .sys-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 16px;
+            font-family: inherit;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .sys-btn:hover, .sys-btn:active {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Canvas */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            /* Custom cursor target */
+            cursor: crosshair;
+        }
+
+        /* Modal */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: auto;
+            padding: 20px; /* Prevent edge touching on mobile */
+        }
+
+        .modal-box {
+            background: #0f172a;
+            border: 2px solid var(--accent-cyan);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(6, 182, 212, 0.3);
+            position: relative;
+        }
+
+        .modal-box::before {
+            content: "SECURE CONNECTION ESTABLISHED";
+            position: absolute;
+            top: -12px; left: 50%; transform: translateX(-50%);
+            background: #0f172a;
+            padding: 0 10px;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            white-space: nowrap;
+        }
+
+        h2 { margin-top: 0; color: white; text-shadow: 0 0 10px rgba(255,255,255,0.5); font-size: 1.5rem; }
+        p { color: #94a3b8; line-height: 1.6; margin-bottom: 25px; font-size: 0.9rem; }
+
+        .start-btn {
+            background: var(--accent-cyan);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-weight: 700;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            width: 100%; /* Full width button on mobile */
+        }
+        .start-btn:hover, .start-btn:active { background: #67e8f9; box-shadow: 0 0 20px var(--accent-cyan); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        /* Scanline */
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: rgba(6, 182, 212, 0.1);
+            position: absolute;
+            z-index: 5;
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            #ui-layer { padding: 10px; }
+            
+            .header {
+                flex-direction: column-reverse; /* Controls on top */
+                gap: 10px;
+            }
+
+            .controls-panel {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .sys-btn {
+                flex: 1;
+                padding: 12px;
+                text-align: center;
+            }
+
+            .status-panel {
+                width: 100%;
+                min-width: auto;
+                padding: 12px;
+            }
+
+            .stat-row {
+                font-size: 0.8rem;
+                margin-bottom: 3px;
+            }
+
+            .footer {
+                font-size: 0.6rem;
+            }
+            
+            h2 { font-size: 1.2rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanline"></div>
+
+    <div id="ui-layer">
+        <div class="header">
+            <div class="status-panel">
+                <div class="stat-row">
+                    <span class="stat-label">System Integrity</span>
+                    <span class="stat-val" id="hp-val">100%</span>
+                </div>
+                <div class="health-bar-container">
+                    <div class="health-bar-fill" id="hp-bar"></div>
+                </div>
+                <div style="height: 10px;"></div>
+                <div class="stat-row">
+                    <span class="stat-label">Threats Neutralized</span>
+                    <span class="stat-val" id="score-val">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Session Record</span>
+                    <span class="stat-val" id="record-val">0</span>
+                </div>
+            </div>
+
+            <div class="controls-panel">
+                <button class="sys-btn" onclick="goHome()">Disconnect</button>
+                <button class="sys-btn" onclick="togglePause()">Pause / Resume</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            SEC_OPS_TERMINAL_V4.2 // USER: <span id="emp-id">UNKNOWN</span>
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div class="modal-box">
+            <h2>FIREWALL BREACH DETECTED</h2>
+            <p>
+                Hostile data packets are converging on the central mainframe. 
+                <br><br>
+                <strong>PROTOCOL:</strong> Tap hostile nodes to execute DENY commands. 
+                Prioritize <span style="color:var(--accent-red)">RED</span> high-speed packets.
+                Do not let integrity reach 0%.
+            </p>
+            <button class="start-btn" onclick="startGame()">INITIATE DEFENSE</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width, height, centerX, centerY;
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            centerX = width / 2;
+            centerY = height / 2;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- Game State ---
+        let gameActive = false;
+        let isPaused = false;
+        let score = 0;
+        let highScore = 0;
+        let health = 100;
+        let lastTime = 0;
+        
+        // --- Entities ---
+        let enemies = [];
+        let particles = [];
+        let projectiles = [];
+        
+        const ENEMY_TYPES = [
+            { type: 'standard', color: '#ef4444', speed: 1.5, hp: 1, score: 10, radius: 10 },
+            { type: 'tank', color: '#f59e0b', speed: 0.8, hp: 3, score: 30, radius: 15 },
+            { type: 'fast', color: '#d946ef', speed: 2.5, hp: 1, score: 20, radius: 8 }
+        ];
+
+        let spawnRate = 1500;
+        let spawnTimer = 0;
+        let difficultyMultiplier = 1;
+
+        // --- Init ---
+        function init() {
+            const empId = localStorage.getItem('gravity_employee_id') || 'GUEST';
+            document.getElementById('emp-id').textContent = empId;
+            
+            const storedRec = localStorage.getItem('gravity_network_highscore');
+            highScore = storedRec ? parseInt(storedRec) : 0;
+            updateUI();
+
+            canvas.addEventListener('mousedown', handleClick);
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Stop zoom
+                // Use first touch
+                const touch = e.touches[0];
+                handleClick({ clientX: touch.clientX, clientY: touch.clientY });
+            }, {passive: false});
+        }
+
+        function startGame() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            resetGame();
+            gameActive = true;
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            enemies = [];
+            particles = [];
+            projectiles = [];
+            score = 0;
+            health = 100;
+            spawnRate = 1500;
+            difficultyMultiplier = 1;
+            updateUI();
+        }
+
+        function togglePause() {
+            if(!gameActive) return;
+            isPaused = !isPaused;
+            if(!isPaused) {
+                lastTime = performance.now();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // --- Core Loop ---
+        function gameLoop(timestamp) {
+            if (!gameActive || isPaused) return;
+
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            // Difficulty scaling
+            difficultyMultiplier += 0.0001 * dt; // Slowly get harder
+            
+            // Spawning
+            spawnTimer += dt;
+            if (spawnTimer > (spawnRate / difficultyMultiplier)) {
+                spawnEnemy();
+                spawnTimer = 0;
+            }
+
+            // Update Enemies
+            enemies.forEach(e => {
+                // Move towards center
+                const dx = centerX - e.x;
+                const dy = centerY - e.y;
+                const angle = Math.atan2(dy, dx);
+                
+                e.x += Math.cos(angle) * e.speed * difficultyMultiplier;
+                e.y += Math.sin(angle) * e.speed * difficultyMultiplier;
+
+                // Check collision with server (center)
+                const dist = Math.hypot(dx, dy);
+                if (dist < 40) { // Server radius approx 40
+                    takeDamage(10);
+                    e.dead = true;
+                    createExplosion(e.x, e.y, '#ef4444', 5);
+                }
+            });
+
+            // Update Projectiles (Visual trails from clicks)
+            projectiles.forEach(p => {
+                p.life -= dt * 0.005;
+                p.x += Math.cos(p.angle) * 20; // Fast
+                p.y += Math.sin(p.angle) * 20;
+            });
+
+            // Update Particles
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                p.size *= 0.95;
+            });
+
+            // Cleanup
+            enemies = enemies.filter(e => !e.dead);
+            particles = particles.filter(p => p.life > 0);
+            projectiles = projectiles.filter(p => p.life > 0);
+        }
+
+        function spawnEnemy() {
+            // Pick side
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            const buffer = 50;
+
+            switch(side) {
+                case 0: x = Math.random() * width; y = -buffer; break; // Top
+                case 1: x = width + buffer; y = Math.random() * height; break; // Right
+                case 2: x = Math.random() * width; y = height + buffer; break; // Bottom
+                case 3: x = -buffer; y = Math.random() * height; break; // Left
+            }
+
+            // Pick type based on difficulty chance
+            const roll = Math.random();
+            let typeIdx = 0;
+            if (roll > 0.8) typeIdx = 1; // Tank
+            if (roll > 0.9 && difficultyMultiplier > 1.5) typeIdx = 2; // Fast
+
+            const stats = ENEMY_TYPES[typeIdx];
+
+            enemies.push({
+                x: x, y: y,
+                ...stats,
+                maxHp: stats.hp,
+                dead: false
+            });
+        }
+
+        function handleClick(e) {
+            if (!gameActive || isPaused) return;
+
+            const clickX = e.clientX;
+            const clickY = e.clientY;
+
+            // Visual projectile from center
+            const angle = Math.atan2(clickY - centerY, clickX - centerX);
+            projectiles.push({
+                x: centerX, y: centerY,
+                angle: angle,
+                life: 1.0,
+                color: 'var(--accent-cyan)'
+            });
+
+            // Check hit
+            // Iterate backwards to hit top enemies first
+            let hit = false;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const en = enemies[i];
+                const dist = Math.hypot(en.x - clickX, en.y - clickY);
+                
+                // Generous hitbox
+                if (dist < en.radius + 20) { // Increased hit radius for mobile
+                    en.hp--;
+                    createExplosion(en.x, en.y, '#ffffff', 3);
+                    hit = true;
+                    
+                    if (en.hp <= 0) {
+                        en.dead = true;
+                        score += en.score;
+                        createExplosion(en.x, en.y, en.color, 10);
+                        updateUI();
+                    }
+                    break; // One shot per click
+                }
+            }
+
+            if (!hit) {
+                // Miss effect?
+            }
+        }
+
+        function takeDamage(amount) {
+            health -= amount;
+            // Shake effect
+            canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+            setTimeout(() => canvas.style.transform = 'none', 50);
+
+            if (health <= 0) {
+                health = 0;
+                gameOver();
+            }
+            updateUI();
+        }
+
+        function createExplosion(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    life: 1.0,
+                    size: Math.random() * 3 + 1,
+                    color: color
+                });
+            }
+        }
+
+        // --- Render ---
+        function draw() {
+            // Clear with trail effect
+            ctx.fillStyle = 'rgba(2, 6, 23, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw Grid (Hex or Lines)
+            drawGrid();
+
+            // Draw Server (Center)
+            drawServer();
+
+            // Draw Projectiles
+            ctx.strokeStyle = '#06b6d4';
+            ctx.lineWidth = 2;
+            projectiles.forEach(p => {
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x - Math.cos(p.angle)*20, p.y - Math.sin(p.angle)*20);
+                ctx.stroke();
+            });
+
+            // Draw Enemies
+            enemies.forEach(e => {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = e.color;
+                ctx.fillStyle = e.color;
+                
+                ctx.beginPath();
+                if (e.type === 'standard') {
+                    // Diamond
+                    ctx.moveTo(e.x, e.y - e.radius);
+                    ctx.lineTo(e.x + e.radius, e.y);
+                    ctx.lineTo(e.x, e.y + e.radius);
+                    ctx.lineTo(e.x - e.radius, e.y);
+                } else if (e.type === 'tank') {
+                    // Square
+                    ctx.rect(e.x - e.radius, e.y - e.radius, e.radius*2, e.radius*2);
+                } else {
+                    // Triangle
+                    ctx.moveTo(e.x + e.radius, e.y);
+                    ctx.lineTo(e.x - e.radius, e.y + e.radius);
+                    ctx.lineTo(e.x - e.radius, e.y - e.radius);
+                }
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Health ring for tanks
+                if (e.maxHp > 1) {
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(e.x, e.y, e.radius + 5, 0, (Math.PI * 2) * (e.hp / e.maxHp));
+                    ctx.stroke();
+                }
+            });
+
+            // Draw Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            
+            // Perspective grid effect logic could go here, keeping it simple 2D for now
+            ctx.beginPath();
+            for (let x = 0; x < width; x += gridSize) {
+                ctx.moveTo(x, 0); ctx.lineTo(x, height);
+            }
+            for (let y = 0; y < height; y += gridSize) {
+                ctx.moveTo(0, y); ctx.lineTo(width, y);
+            }
+            ctx.stroke();
+        }
+
+        function drawServer() {
+            // Pulsing effect
+            const pulse = Math.sin(performance.now() / 200) * 5;
+            
+            // Outer Shield
+            ctx.strokeStyle = health > 30 ? '#06b6d4' : '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 40 + pulse, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner Core
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Icon
+            ctx.fillStyle = health > 30 ? '#06b6d4' : '#ef4444';
+            ctx.font = '24px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⚡', centerX, centerY);
+        }
+
+        // --- Helpers ---
+        function updateUI() {
+            document.getElementById('hp-val').textContent = health + '%';
+            document.getElementById('score-val').textContent = score;
+            document.getElementById('record-val').textContent = highScore;
+            
+            const bar = document.getElementById('hp-bar');
+            bar.style.width = health + '%';
+            bar.style.background = health > 30 ? 'var(--accent-green)' : 'var(--accent-red)';
+            
+            const valText = document.getElementById('hp-val');
+            if (health < 30) valText.classList.add('danger');
+            else valText.classList.remove('danger');
+        }
+
+        function gameOver() {
+            gameActive = false;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('gravity_network_highscore', highScore);
+            }
+
+            document.getElementById('modal-overlay').style.display = 'flex';
+            document.querySelector('.modal-box h2').textContent = "SYSTEM CRITICAL";
+            document.querySelector('.modal-box h2').style.color = "var(--accent-red)";
+            document.querySelector('.modal-box p').innerHTML = `Mainframe compromised.<br>Threats Neutralized: <strong style="color:white; font-size:1.5rem">${score}</strong>`;
+            document.querySelector('.start-btn').textContent = "REBOOT SYSTEM";
+        }
+
+        function goHome() {
+            window.location.href = '../index.html';
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
